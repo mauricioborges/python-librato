@@ -86,3 +86,6 @@ class Counter(Metric):
 
     def what_am_i(self):
         return 'counters'
+
+class Composite(Metric):
+    pass

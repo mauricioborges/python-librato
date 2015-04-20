@@ -8,7 +8,7 @@ class MockServer(object):
         self.clean()
 
     def clean(self):
-        self.metrics = {'gauges': OrderedDict(), 'counters': OrderedDict()}
+        self.metrics = {'gauges': OrderedDict(), 'counters': OrderedDict(), 'composites':OrderedDict()}
         self.instruments = OrderedDict()
         self.alerts = OrderedDict()
         self.dashboards = OrderedDict()
@@ -25,7 +25,7 @@ class MockServer(object):
         return json.dumps(answer).encode('utf-8')
 
     def create_metric(self, payload):
-        for metric_type in ['gauge', 'counter']:
+        for metric_type in ['gauge', 'counter','composite']:
             for metric in payload.get(metric_type + 's', []):
                 name = metric['name']
                 self.add_metric_to_store(metric, metric_type)
@@ -170,11 +170,20 @@ class MockServer(object):
     def get_metric(self, name, payload):
         gauges = self.metrics['gauges']
         counters = self.metrics['counters']
+        composites = self.metrics['composites']
         if name in gauges:
             metric = gauges[name]
         if name in counters:
             metric = counters[name]
+        if name in composites:
+            metric = composites[name]
         return json.dumps(metric).encode('utf-8')
+    
+    def update_metric(self, name, payload):
+        data = payload.copy()
+        data['name'] = name
+        self.add_metric_to_store(data, 'composite')
+        return ''
 
     def delete_metric(self, name, payload):
         gauges = self.metrics['gauges']
@@ -256,6 +265,8 @@ class MockResponse(object):
             return server.delete_metric(name, r.body)
         elif self._req_is_get_metric():
             return server.get_metric(self._extract_from_url(), r.body)
+        elif self._req_is_update_metric():
+            return server.update_metric(self._extract_from_url(), r.body)
 
         elif self._req_is_list_of_instruments():
             return server.list_of_instruments()
@@ -310,6 +321,10 @@ class MockResponse(object):
     def _req_is_send_value(self, what):
         return (self._method_is('POST') and
                 re.match('/v1/%s/([\w_]+).json' % what, self.request.uri))
+
+    def _req_is_update_metric(self):
+        return (self._method_is('PUT') and
+                re.match('/v1/metrics/([\w_]+)', self.request.uri))
 
     # Instruments
     def _req_is_create_instrument(self):

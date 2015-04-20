@@ -41,7 +41,7 @@ import json
 import email.message
 from librato import exceptions
 from librato.queue import Queue
-from librato.metrics import Gauge, Counter
+from librato.metrics import Gauge, Counter, Composite
 from librato.instruments import Instrument
 from librato.alerts import Alert
 from librato.dashboards import Dashboard
@@ -224,6 +224,8 @@ class LibratoConnection(object):
             return Gauge.from_dict(self, resp)
         elif resp['type'] == 'counter':
             return Counter.from_dict(self, resp)
+        elif resp['type'] == 'composite':
+            return Composite.from_dict(self, resp)
         else:
             raise Exception('The server sent me something that is not a Gauge nor a Counter.')
 
@@ -255,6 +257,13 @@ class LibratoConnection(object):
             payload = {'names': names}
             path = "metrics"
         return self._mexe(path, method="DELETE", query_props=payload)
+
+    def create_composite(self, name, composite, **query_props):
+        update_props = query_props.copy()
+        update_props['composite'] = composite
+        update_props['type'] = "composite"
+        self.update(name, query_props=query_props)
+
 
     #
     # Dashboards!
