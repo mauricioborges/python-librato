@@ -27,7 +27,7 @@
 class Metric(object):
     """Librato Metric Base class"""
 
-    def __init__(self, connection, name, attributes=None, period=None, description=None ):
+    def __init__(self, connection, name, attributes=None, period=None, description=None):
         self.connection = connection
         self.name = name
         self.attributes = attributes or {}
@@ -50,9 +50,12 @@ class Metric(object):
             cls = Gauge
         elif data.get('type') == "counter":
             cls = Counter
+        elif data.get('type') == "composite":
+            cls = Composite
 
         obj = cls(connection, data['name'])
         obj.period = data['period']
+        obj.composite = data['composite'] if 'composite' in data else None
         obj.attributes = data['attributes']
         obj.description = data['description'] if 'description' in data else None
         obj.measurements = data['measurements'] if 'measurements' in data else {}
